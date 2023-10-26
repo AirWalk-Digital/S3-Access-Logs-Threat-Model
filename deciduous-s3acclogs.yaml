@@ -1,0 +1,67 @@
+theme: accessible
+title: Using S3 as an exfiltration mechanism
+
+facts:
+- local_data_access: Adversary has local access to data, e.g. a CSV
+  from:
+  - reality:
+- aws_account_access: Has access to an organisation's AWS account, e.g. member of an app or platform team 
+  from:
+  - local_data_access:
+- server_access_logs: Attacker has server access logs enabled in their CF distribution or S3 Bucket
+  from:
+  - allowed_webbrowsing: 
+  - leaky_vpc_endpoint:
+
+attacks:
+- no_least_privilege_iam: IAM policy is not least privilege
+  from:
+  - aws_account_access
+- curl_s3: curl GET arbitrary s3 bucket
+  from:
+  - local_data_access:
+
+- allowed_webbrowsing: "*.s3.amazonaws.com allowlisted"
+  from:
+  - proxy_firewall:
+- no_proxy: There are no egress controls for internet traffic 
+  from:
+  - outside_vpc:
+  - curl_s3
+
+- leaky_vpc_endpoint: The policy on the VPC endpoint is not least privilege/access, e.g. resource:*, action:* 
+  from:
+  - inside_vpc:
+
+
+mitigations:
+- least_privilege_iam: IAM policy allows only specific account, resources, networks
+  from:
+  - no_least_privilege_iam
+
+- inside_vpc: Your endpoint is inside a VPC and can only use a VPC endpoint to reach to S3
+  from:
+  - least_privilege_iam
+  - no_least_privilege_iam
+
+- outside_vpc: Your endpoint is outside a VPC 
+  from:
+  - least_privilege_iam
+  - no_least_privilege_iam
+
+- proxy_firewall: Proxy/Firewall/CASB prevents access 
+  from:
+  - no_proxy
+
+- vpc_endpoint: VPC endpoint enforces principal, resource, account, or network conditions
+  from:
+  - inside_vpc
+
+
+goals:
+- exfiltration: Exfiltrate Data
+  from:
+  - server_access_logs:
+  - no_proxy: 
+
+
